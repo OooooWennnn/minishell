@@ -16,6 +16,21 @@ int main(int argc, char **argv, char **envp)
     }
 
     while(1) {
+        char *input;
+        input = readline("minishell> ");
+
+        if (input == NULL) {
+            printf("exit\n");
+            break;
+        }
+
+        if (*input != '\n') {
+            t_token *tokens;
+
+            tokens = tokenize(input);
+        }
+
+        free(input);
 
     }
 }
