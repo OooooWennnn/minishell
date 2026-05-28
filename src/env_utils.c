@@ -111,7 +111,7 @@ void envadd_back(t_env **env_list, t_env *new_node) {
 
     t_env *curr = *env_list;
     while (curr->next != NULL) {
-        printf("%s=%s\n", curr->key, curr->value);
+        // printf("%s=%s\n", curr->key, curr->value);
         curr = curr->next;
     }
 
