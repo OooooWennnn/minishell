@@ -11,7 +11,6 @@ int main(int argc, char **argv, char **envp)
 
     while (envp[i] != NULL) {
         t_env *node = parse_env_node(envp[i]);
-
         if (node != NULL) {
             envadd_back(&env_list, node);
         }
@@ -27,13 +26,22 @@ int main(int argc, char **argv, char **envp)
             break;
         }
 
-        if (*input != '\n') {
-            t_token *tokens;
+        if (*input != '\0') {
+            add_history(input);
 
-            tokens = tokenize(input);
+            t_token *tokens = tokenize(input);
+            if (tokens != NULL) {
+                t_ast_node *ast = generate_ast(tokens);
+
+                if (ast != NULL) {
+                    printf("\n=== 🛠️ AST DEBUG 🛠️ ===\n");
+                    print_ast(ast, 0);
+                    printf("========================\n\n");
+
+                    free_ast(ast);
+                }
+            }
         }
-
         free(input);
-
     }
 }

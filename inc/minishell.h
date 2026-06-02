@@ -24,12 +24,39 @@ typedef struct s_token {
     struct s_token *next;
 } t_token;
 
+// 3. Parser (AST)
+typedef enum e_node_type {
+    NODE_PIPE,
+    NODE_CMD,
+    NODE_REDIR
+} t_node_type;
+
+typedef struct s_ast_node {
+    t_node_type type;
+
+    // used by NODE_CMD
+    char **args;
+
+    // used by NODE_REDIR
+    t_token_type redir_type;
+    char *value;
+
+    struct s_ast_node *left;
+    struct s_ast_node *right;
+} t_ast_node;
+
 
 // env_utils functions
 t_env *parse_env_node(const char* str);
 t_env *envnew(char *key, char *value);
 void envadd_back(t_env **env_list, t_env *new_node);
 
+// lexer functions
 t_token *tokenize(char *input);
+
+// parser functions
+t_ast_node *generate_ast (t_token *head);
+void free_ast (t_ast_node *node);
+void print_ast(t_ast_node *node, int depth);
 
 # endif
