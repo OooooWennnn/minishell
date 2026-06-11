@@ -10,7 +10,7 @@ char *copy_string (char *str) {
 
     char *new_str = (char*)malloc(sizeof(char) * (len + 1));
     if (!new_str) {
-        printf("Error creating *new_str.");
+        printf("Error creating *new_str.\n");
         return NULL;
     }
 
@@ -27,7 +27,7 @@ char *copy_string (char *str) {
 t_ast_node *create_node (t_node_type type) {
     t_ast_node *node = calloc(1, sizeof(t_ast_node));
     if (!node) {
-        printf("Error creating a node");
+        printf("Error creating a node\n");
         return NULL;
     }
 
@@ -158,7 +158,7 @@ t_ast_node *parse_pipe (t_token **curr) {
         *curr = (*curr)->next;
 
         if (*curr == NULL || (*curr)->type == TOKEN_PIPE) {
-            printf("Syntax error: invalid pipe or consecutive pipe sign");
+            printf("Syntax error: invalid pipe or consecutive pipe sign\n");
             free_ast(node);
             return NULL;
         }

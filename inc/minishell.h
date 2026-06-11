@@ -45,6 +45,13 @@ typedef struct s_ast_node {
     struct s_ast_node *right;
 } t_ast_node;
 
+typedef int (*t_builtin_func)(char **args, t_env **env_list);
+
+typedef struct s_builtin {
+    char *cmd_name;
+    t_builtin_func func;
+} t_builtin;
+
 
 // env_utils functions
 t_env *parse_env_node(const char* str);
@@ -58,5 +65,17 @@ t_token *tokenize(char *input);
 t_ast_node *generate_ast (t_token *head);
 void free_ast (t_ast_node *node);
 void print_ast(t_ast_node *node, int depth);
+
+// executor functions
+void execute_ast (t_ast_node *node, t_env *env_list);
+
+// builtin cmd functions
+int builtin_echo(char **args, t_env **env_list);
+int builtin_cd(char **args, t_env **env_list);
+int builtin_pwd(char **args, t_env **env_list);
+int builtin_export(char **args, t_env **env_list);
+int builtin_unset(char **args, t_env **env_list);
+int builtin_env(char **args, t_env **env_list);
+int builtin_exit(char **args, t_env **env_list);
 
 # endif
