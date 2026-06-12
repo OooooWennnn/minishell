@@ -1,6 +1,7 @@
+#include "../inc/minishell.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "../inc/minishell.h"
+#include <string.h>
 
 /**
  * Parses a string of the form "KEY=VALUE" and returns a pointer to a newly allocated t_env struct.
@@ -116,4 +117,35 @@ void envadd_back(t_env **env_list, t_env *new_node) {
     }
 
     curr->next = new_node;
+}
+
+char *get_env_value(const char *key, t_env **env_list) {
+    if (env_list == NULL || *env_list == NULL) {
+        return NULL;
+    }
+
+    t_env *curr = *env_list;
+    while (curr != NULL) {
+        if (strncmp(curr->key, key, strlen(key) + 1) == 0) {
+            return curr->value;
+        }
+        curr = curr->next;
+    }
+    return NULL;
+}
+
+void update_env_value(const char *key, const char *value, t_env **env_list) {
+    t_env *curr = *env_list;
+
+    while (curr != NULL) {
+        if (strncmp(curr->key, key, strlen(key) + 1) == 0) {
+            if (curr->value != NULL) {
+                free(curr->value);
+            }
+
+            curr->value = strdup(value);
+            return;
+        }
+        curr = curr->next;
+    }
 }
