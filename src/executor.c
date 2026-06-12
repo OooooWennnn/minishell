@@ -29,7 +29,7 @@ int run_builtin (char **args, t_env **env_list) {
             
             printf("command %s matched with %s\n", args[0], g_builtins[i].cmd_name);
 
-            // int exit_code = g_builtins[i].func(args, env_list);
+            int exit_code = g_builtins[i].func(args, env_list);
 
             // Update global exit code for $?
             // 0 on success 1 on fail

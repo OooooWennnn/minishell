@@ -57,6 +57,8 @@ typedef struct s_builtin {
 t_env *parse_env_node(const char* str);
 t_env *envnew(char *key, char *value);
 void envadd_back(t_env **env_list, t_env *new_node);
+char *get_env_value(const char *key, t_env **env_list);
+void update_env_value(const char *key, const char *value, t_env **env_list);
 
 // lexer functions
 t_token *tokenize(char *input);
