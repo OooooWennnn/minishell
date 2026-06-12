@@ -4,22 +4,30 @@
 
 char *copy_string (char *str) {
     int len = 0;
+    int num_quotes = 0;
     while (str[len] != '\0') {
+        if (str[len] == '"') {
+            num_quotes++;
+        }
         len++;
     }
 
-    char *new_str = (char*)malloc(sizeof(char) * (len + 1));
+    char *new_str = (char*)malloc(sizeof(char) * (len - num_quotes + 1));
     if (!new_str) {
         printf("Error creating *new_str.\n");
         return NULL;
     }
 
     int i = 0;
+    int j = 0;
     while (i < len) {
-        new_str[i] = str[i];
+        if (str[i] != '"') {
+            new_str[j] = str[i];
+            j++;
+        }
         i++;
     }
-    new_str[i] = '\0';
+    new_str[j] = '\0';
 
     return new_str;
 }
