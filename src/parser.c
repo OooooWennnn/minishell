@@ -6,9 +6,6 @@ char *copy_string (char *str) {
     int len = 0;
     int num_quotes = 0;
     while (str[len] != '\0') {
-        if (str[len] == '"') {
-            num_quotes++;
-        }
         len++;
     }
 
@@ -19,15 +16,11 @@ char *copy_string (char *str) {
     }
 
     int i = 0;
-    int j = 0;
     while (i < len) {
-        if (str[i] != '"') {
-            new_str[j] = str[i];
-            j++;
-        }
+        new_str[i] = str[i];
         i++;
     }
-    new_str[j] = '\0';
+    new_str[i] = '\0';
 
     return new_str;
 }
@@ -97,22 +90,6 @@ void free_ast (t_ast_node *node) {
     }
 
     free(node);
-}
-
-
-// TODO: free_tokens to free the token list
-void free_tokens (t_token *head) {
-    if (head == NULL) return;
-
-    t_token *next = head;
-    while (next != NULL) {
-        next = next->next;
-        if (head->value) {
-            free(head->value);
-        }
-        free(head);
-        head = next;
-    }
 }
 
 t_ast_node *parse_cmd (t_token **curr) {

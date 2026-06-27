@@ -2,6 +2,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+int update_quote_state(char c, int current_state) {
+    if (c == '\"') {
+        if (current_state == 0) {
+            return 1; 
+        } else if (current_state == 1) {
+            return 0; 
+        }
+    } else if (c == '\'') {
+        if (current_state == 0) {
+            return 2; 
+        } else if (current_state == 2) {
+            return 0; 
+        }
+    }
+    return current_state;
+}
+
 void skip_whitespaces (char *input, int *i) {
     while (input[*i] == ' ' || input[*i] == '\t') {
         (*i)++;
@@ -15,10 +32,21 @@ int is_operator (char c) {
 t_token *extract_word (char *input, int *i) {
     int len = 0;
     int start = *i;
+    int in_quotes = 0;
 
-    while (input[*i] != '\0' && input[*i] != ' ' && input[*i] != '\t' && !is_operator(input[*i])) {
+    while (input[*i] != '\0') {
+        in_quotes = update_quote_state(input[*i], in_quotes);
+
+        if (in_quotes == 0 && (input[*i] == ' ' || input[*i] == '\t' || is_operator(input[*i]))) {
+            break;
+        }
         len++;
         (*i)++;
+    }
+
+    if (in_quotes != 0) {
+        fprintf(stderr, "Syntax error: unclosed quotes\n");
+        return NULL;
     }
 
     t_token *new_token = (t_token*)malloc(sizeof (t_token));
@@ -115,17 +143,32 @@ void token_add_back (t_token **head, t_token *new_token) {
 t_token *tokenize(char *input) {
     t_token *head = NULL;
     int i = 0;
+    char in_quotes = 0;
 
     while (input[i] != '\0') {
-        skip_whitespaces (input, &i);
+        in_quotes = update_quote_state(input[i], in_quotes);
+
+        if (in_quotes == 0) {
+            skip_whitespaces (input, &i);
+        }
 
         t_token *new_token = NULL;
 
         if (is_operator(input[i])) {
             new_token = extract_operator (input, &i);
+            if (new_token == NULL) {
+                fprintf(stderr, "Error: failed to extract operator token\n");
+                free_tokens(head);
+                return NULL;
+            }
         } 
         else {
             new_token = extract_word (input, &i);
+            if (new_token == NULL) {
+                fprintf(stderr, "Error: failed to extract word token\n");
+                free_tokens(head);
+                return NULL;
+            }   
         }
 
         token_add_back(&head, new_token);

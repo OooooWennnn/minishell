@@ -52,6 +52,9 @@ typedef struct s_builtin {
     t_builtin_func func;
 } t_builtin;
 
+// utils functions
+void free_tokens (t_token *head);
+
 
 // env_utils functions
 t_env *parse_env_node(const char* str);
