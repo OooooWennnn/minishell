@@ -1,6 +1,19 @@
 # ifndef MINISHELL_H
 # define MINISHELL_H
 
+// string builder
+typedef struct s_builder {
+    char *str;
+    int len;
+    int capacity;
+} t_builder;
+
+typeder enum e_quote {
+    NORMAL,
+    SINGLE_QUOTE,
+    DOUBLE_QUOTE
+} t_quote;
+
 // 1. Environment variables key-value linked list
 typedef struct s_env {
     char* key;
@@ -54,6 +67,7 @@ typedef struct s_builtin {
 
 // utils functions
 void free_tokens (t_token *head);
+int update_quote_state(char c, int current_state);
 
 
 // env_utils functions
@@ -70,6 +84,9 @@ t_token *tokenize(char *input);
 t_ast_node *generate_ast (t_token *head);
 void free_ast (t_ast_node *node);
 void print_ast(t_ast_node *node, int depth);
+
+// expander functions
+int expand_ast (t_ast_node *node, t_env **env_list);
 
 // executor functions
 void execute_ast (t_ast_node *node, t_env *env_list);

@@ -38,6 +38,7 @@ int main(int argc, char **argv, char **envp)
                     print_ast(ast, 0);
                     printf("========================\n\n");
 
+                    // expand_ast(ast, )
                     execute_ast(ast, env_list);
 
                     free_ast(ast);

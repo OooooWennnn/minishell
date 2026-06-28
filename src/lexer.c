@@ -2,23 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int update_quote_state(char c, int current_state) {
-    if (c == '\"') {
-        if (current_state == 0) {
-            return 1; 
-        } else if (current_state == 1) {
-            return 0; 
-        }
-    } else if (c == '\'') {
-        if (current_state == 0) {
-            return 2; 
-        } else if (current_state == 2) {
-            return 0; 
-        }
-    }
-    return current_state;
-}
-
 void skip_whitespaces (char *input, int *i) {
     while (input[*i] == ' ' || input[*i] == '\t') {
         (*i)++;
@@ -32,19 +15,19 @@ int is_operator (char c) {
 t_token *extract_word (char *input, int *i) {
     int len = 0;
     int start = *i;
-    int in_quotes = 0;
+    int in_quotes = NORMAL;
 
     while (input[*i] != '\0') {
         in_quotes = update_quote_state(input[*i], in_quotes);
 
-        if (in_quotes == 0 && (input[*i] == ' ' || input[*i] == '\t' || is_operator(input[*i]))) {
+        if (in_quotes == NORMAL && (input[*i] == ' ' || input[*i] == '\t' || is_operator(input[*i]))) {
             break;
         }
         len++;
         (*i)++;
     }
 
-    if (in_quotes != 0) {
+    if (in_quotes != NORMAL) {
         fprintf(stderr, "Syntax error: unclosed quotes\n");
         return NULL;
     }
