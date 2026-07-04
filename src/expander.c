@@ -1,5 +1,7 @@
 #include "../include/minishell.h"
 
+#define PROTECTED_SPACE '\x01'
+
 int is_env_char(char c) {
     if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
         (c >= '0' && c <= '9') || c == '_') {
@@ -8,58 +10,110 @@ int is_env_char(char c) {
     return 0;
 }
 
-char *expand_string(char *arg, t_env **env_list) {
+static void restore_protected_space(char *s)
+{
+    int i = 0;
+
+    while (s[i])
+    {
+        if (s[i] == PROTECTED_SPACE)
+            s[i] = ' ';
+        i++;
+    }
+}
+
+char *expand_string(char *arg, t_env **env_list)
+{
     int quote_state = NORMAL;
     int i = 0;
-    
     t_builder sb;
-    if (!sb_init(&sb)) return NULL;
-    
-    while (arg[i] != '\0') {
-        
-        // TODO: 이거 split 함수에 옯기셈 split -> quote 제거 
-        // skip quotes 
-        if (arg[i] == '\"' || arg[i] == '\'') {
+
+    if (!sb_init(&sb))
+        return NULL;
+
+    while (arg[i])
+    {
+        if (arg[i] == '\'' || arg[i] == '"')
+        {
             quote_state = update_quote_state(arg[i], quote_state);
             i++;
             continue;
         }
- 
-        // no quote, double quote -> expand env
-        if (arg[i] == '$' && quote_state != SINGLE_QUOTE) {
 
-            // extract env variable key
+        if (arg[i] == ' ' && quote_state != NORMAL)
+        {
+            if (!sb_append_char(&sb, PROTECTED_SPACE))
+            {
+                free(sb.str);
+                return NULL;
+            }
+            i++;
+            continue;
+        }
+
+        if (arg[i] == '$' && quote_state != SINGLE_QUOTE)
+        {
             int len = 0;
             char *start = &arg[i + 1];
-            while (is_env_char(start[len])) {
-                len++;
-            }
 
-            if (len == 0) {
-                sb_append_char (&sb, '$');
+            while (is_env_char(start[len]))
+                len++;
+
+            if (len == 0)
+            {
+                if (!sb_append_char(&sb, '$'))
+                {
+                    free(sb.str);
+                    return NULL;
+                }
                 i++;
                 continue;
             }
 
-            //TODO: implement $? (exit status)
-            
             char temp = start[len];
             start[len] = '\0';
-            char *env_val = get_env_value (start, env_list);
+
+            char *env_val = get_env_value(start, env_list);
+
             start[len] = temp;
-            
-            // append expaned env value to string
-            if (env_val != NULL) {
-                sb_append_str(&sb, env_val);
+
+            if (env_val)
+            {
+                int j = 0;
+                while (env_val[j])
+                {
+                    if (env_val[j] == ' ' && quote_state != NORMAL)
+                    {
+                        if (!sb_append_char(&sb, PROTECTED_SPACE))
+                        {
+                            free(sb.str);
+                            return NULL;
+                        }
+                    }
+                    else
+                    {
+                        if (!sb_append_char(&sb, env_val[j]))
+                        {
+                            free(sb.str);
+                            return NULL;
+                        }
+                    }
+                    j++;
+                }
             }
-            
-            i += len + 1;   // skip $ too
-        } else {
-            // append each char
-            sb_append_char(&sb, arg[i]);
-            i++;
+
+            i += len + 1;
+            continue;
         }
+
+        if (!sb_append_char(&sb, arg[i]))
+        {
+            free(sb.str);
+            return NULL;
+        }
+        i++;
     }
+
     return sb.str;
 }
 
@@ -72,52 +126,176 @@ int space_exists (char *arg) {
     return 0;
 }
 
-char **split_string (char* str, char dil) {
-    int words = 0;
-    // for (int i = 0; )
-
-
-    char **tokens;
-    int len = 0;
-
-    int tok_count = 0;
-
-    for (int i = 0; str[i] != '\0'; i++) {
-        len++;
-        if (str[i] == dil) {
-            char *tok = (char *)malloc(sizeof(char) * (len + 1));
-            for (int j = 0; j < len; j++) {
-                tok[j] = str[j];
-            }
-            tok[j] = '\0';
-            tokens[tok_count] = tok;
-            tok_count++;
-            i++;
-            len = 0;
-        }
+static void free_tokens(char **tokens, int len) {
+    if (!tokens) return;
+    for (int i = 0; i < len; i++) {
+        free(tokens[i]);
     }
+    free(tokens);
+}
+
+char **split_string(char *str, char dil)
+{
+    int i = 0;
+    int tok_len = 0;
+    char **tokens = NULL;
+    t_builder sb;
+
+    if (!sb_init(&sb))
+        return NULL;
+
+    while (str[i])
+    {
+        if (str[i] == dil)
+        {
+            char **tmp;
+
+            if (sb.len > 0)
+            {
+                tmp = realloc(tokens, sizeof(char *) * (tok_len + 2));
+                if (!tmp)
+                {
+                    free_tokens(tokens, tok_len);
+                    free(sb.str);
+                    return NULL;
+                }
+                tokens = tmp;
+                tokens[tok_len++] = sb.str;
+
+                if (!sb_init(&sb))
+                {
+                    free_tokens(tokens, tok_len);
+                    return NULL;
+                }
+            }
+            i++;
+            continue;
+        }
+
+        if (!sb_append_char(&sb, str[i]))
+        {
+            free(sb.str);
+            free_tokens(tokens, tok_len);
+            return NULL;
+        }
+        i++;
+    }
+
+    if (sb.len > 0)
+    {
+        char **tmp = realloc(tokens, sizeof(char *) * (tok_len + 2));
+        if (!tmp)
+        {
+            free(sb.str);
+            free_tokens(tokens, tok_len);
+            return NULL;
+        }
+        tokens = tmp;
+        tokens[tok_len++] = sb.str;
+    }
+    else
+        free(sb.str);
+
+    if (!tokens)
+    {
+        tokens = malloc(sizeof(char *) * 1);
+        if (!tokens)
+            return NULL;
+    }
+
+    tokens[tok_len] = NULL;
     return tokens;
 }
 
-
-int expand_cmd_args (char **args, t_env **env_list) {
+int count_tokens (char **args) {
+    int count = 0;
     for (int i = 0; args[i] != NULL; i++) {
-        char *expanded = expand_string(args[i], env_list);
-        if (expanded == NULL) {
-            return 1;
-        }
+        count++;
+    }
+    return count;
+}
 
-        if (space_exists(expanded)) {
+char **splice_tokens (char **args, char **split_tokens, int i) {
+    int tok_len = count_tokens (split_tokens);
+    int arg_len = count_tokens (args);
+
+    char **new_args = (char**)malloc(sizeof(char*) * (arg_len + tok_len));
+    if (!new_args) return NULL;
+
+    int j = 0;
+    while (j < i) {
+        new_args[j] = args[j];
+        j++;
+    }
+
+    int k = 0;
+    while (k < tok_len) {
+        new_args[j++] = split_tokens[k++];
+    }
+
+    i++;
+    while (args[i] != NULL) {
+        new_args[j++] = args[i++];
+    }
+
+    new_args[j] = NULL;
+
+    free(args);
+    free(split_tokens);
+
+    return new_args;
+}
+
+
+int expand_cmd_args(t_ast_node *node, t_env **env_list)
+{
+    char **args = node->args;
+    int i = 0;
+
+    while (args[i])
+    {
+        char *expanded = expand_string(args[i], env_list);
+        if (!expanded)
+            return 1;
+
+        if (space_exists(expanded))
+        {
             char **split_tokens = split_string(expanded, ' ');
-            args = insert_split_tokens (args, split_tokens, i);
-            i += count_tokens(split_tokens) - 1;
+            if (!split_tokens)
+            {
+                free(expanded);
+                return 1;
+            }
+
+            int tok_len = count_tokens(split_tokens);
+
+            for (int k = 0; split_tokens[k]; k++)
+                restore_protected_space(split_tokens[k]);
+
+            char *old_arg = args[i];
+            char **new_args = splice_tokens(args, split_tokens, i);
+            if (!new_args)
+            {
+                free(expanded);
+                return 1;   
+            }
+
+            args = new_args;
+            free(old_arg);
             free(expanded);
+
+            i += tok_len;
         }
-        else {
+        else
+        {
+            restore_protected_space(expanded);
             free(args[i]);
             args[i] = expanded;
+            i++;
         }
     }
+
+    node->args = args;
     return 0;
 }
 
@@ -134,7 +312,7 @@ int expand_ast (t_ast_node *node, t_env **env_list) {
     }
     
     if (node->type == NODE_CMD) {
-        if (expand_cmd_args(node->args, env_list) != 0) {
+        if (expand_cmd_args(node, env_list) != 0) {
             return 1;
         }
     }

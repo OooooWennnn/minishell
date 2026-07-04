@@ -54,6 +54,17 @@ graph TD
     - Setup input infinite loop.
 - **Phase 2**: Lexer & Parser
     - Tokenize `char*` and generate AST.
-- **Phase 3**: Executor & Built-ins
+- **Phase 3**: Expander & Executor
 - **Phase 4**: Pipes & Redirection
 - **Phase 5**: Debugging
+
+
+## Core Architecture & Troubleshooting
+
+* **Issue 1: Space Evaporation and Nested Quotes in Lexer**
+  * **Cause:** A basic space-based split caused the Lexer to incorrectly break spaces inside strings or fail on complex nested quotes.
+  * **Solution:** Implemented an `in_quotes` toggle flag (`int in_quotes = 0;`). When the flag is active, the Lexer securely absorbs spaces as string literals instead of splitting them, entirely preventing space evaporation.
+
+* **Issue 2: Quote Parsing Bug in Parser Module**
+  * **Cause:** Tokens containing specific quote structures were occasionally misinterpreted during the AST (Abstract Syntax Tree) generation phase in the parser module.
+  * **Solution:** Fixed the internal quote parsing logic within the parser module to accurately preserve quote boundaries passed down from the Lexer, ensuring robust command execution.
