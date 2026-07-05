@@ -4,6 +4,8 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+// cc -Wall $(find src -name "*.c") -I inc -lreadline -o minishell
+
 int main(int argc, char **argv, char **envp)
 {
     t_env *env_list = NULL;
@@ -39,7 +41,7 @@ int main(int argc, char **argv, char **envp)
                     printf("========================\n\n");
 
                     // expand_ast(ast, )
-                    execute_ast(ast, env_list);
+                    execute_ast(ast, &env_list);
 
                     free_ast(ast);
                 }

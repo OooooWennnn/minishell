@@ -1,4 +1,5 @@
 #include "../../inc/minishell.h"
+#include <stdlib.h>
 
 int sb_init (t_builder *sb) {
     sb->capacity = 64;

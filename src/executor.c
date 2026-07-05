@@ -41,6 +41,72 @@ int run_builtin (char **args, t_env **env_list) {
     return 0;
 }
 
+static char *join_path (const char *dir, const char *cmd) {
+    t_builder sb;
+    if (!sb_init(&sb)) return NULL;
+    if (!sb_append_str(&sb, dir)) {
+        free(sb.str);
+        return NULL;
+    }
+    if (!sb_append_char(&sb, '/')) {
+        free(sb.str);
+        return NULL;
+    }
+    if (!sb_append_str(&sb, cmd)) {
+        free(sb.str);
+        return NULL;
+    }
+    return sb.str;
+}
+
+char *find_cmd_path (char *cmd, t_env **env_list) {
+    // if cmd contains '/'
+    if (strchr(cmd, '/'))
+    {
+        if (access(cmd, X_OK) == 0)
+            return strdup(cmd);
+        return NULL;
+    }
+
+    char *full_path = NULL;
+    char *path_val = get_env_value("PATH", env_list);
+    if (path_val == NULL) {
+        return NULL;
+    }
+    
+    int i = 0;
+    t_builder sb;
+    
+    if (!sb_init(&sb))
+        return NULL;
+    
+    // split, join path with cmd, and check if it is valid
+    while (1) {
+        if (path_val[i] != ':' && path_val[i] != '\0') {
+            if (!sb_append_char(&sb, path_val[i])) {
+                free(sb.str);
+                return NULL;
+            }
+        }
+        else {
+            full_path = join_path(sb.str, cmd);
+            free(sb.str);
+
+            if (full_path && access(full_path, X_OK) == 0) {
+                return full_path;
+            }
+            else {
+                free(full_path);
+                if (path_val[i] == '\0') break;
+                if (!sb_init(&sb)) return NULL;
+            }
+        }
+        
+        i++;
+    }
+    return NULL;
+}
+
 void execute_cmd(t_ast_node *node, t_env **env_list) {
     if (node->args == NULL || node->args[0] == NULL) return;
 
@@ -49,6 +115,8 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
         return;
     }
 
+    extern char **environ;
+
     pid_t pid = fork();
     if (pid < 0) {
         perror("fork error");
@@ -56,6 +124,15 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
     }
     else if (pid == 0) {
         // child process
+        // char *envp[] = {NULL};
+        char *cmd_path = find_cmd_path(node->args[0], env_list);
+        if (cmd_path == NULL) {
+            fprintf(stderr, "command not found: %s\n", node->args[0]);
+            exit(127);
+        }
+        execve(cmd_path, node->args, environ);
+        perror("execve");
+        exit(126);
         printf("child process (pid: %d)\n", getpid());
 
     }
@@ -66,7 +143,7 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
     }
 }
 
-void execute_ast (t_ast_node *node, t_env *env_list) {
+void execute_ast (t_ast_node *node, t_env **env_list) {
     if (node == NULL) {
         return;
     }
@@ -78,7 +155,7 @@ void execute_ast (t_ast_node *node, t_env *env_list) {
         // execute_redir(node, env_list);
     }
     else if (node->type == NODE_CMD) {
-        execute_cmd(node, &env_list);
+        execute_cmd(node, env_list);
     }
 
 }

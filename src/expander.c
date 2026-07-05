@@ -1,4 +1,5 @@
-#include "../include/minishell.h"
+#include "../inc/minishell.h"
+#include <stdlib.h>
 
 #define PROTECTED_SPACE '\x01'
 
@@ -126,7 +127,7 @@ int space_exists (char *arg) {
     return 0;
 }
 
-static void free_tokens(char **tokens, int len) {
+static void free_str_arr(char **tokens, int len) {
     if (!tokens) return;
     for (int i = 0; i < len; i++) {
         free(tokens[i]);
@@ -155,7 +156,7 @@ char **split_string(char *str, char dil)
                 tmp = realloc(tokens, sizeof(char *) * (tok_len + 2));
                 if (!tmp)
                 {
-                    free_tokens(tokens, tok_len);
+                    free_str_arr(tokens, tok_len);
                     free(sb.str);
                     return NULL;
                 }
@@ -164,7 +165,7 @@ char **split_string(char *str, char dil)
 
                 if (!sb_init(&sb))
                 {
-                    free_tokens(tokens, tok_len);
+                    free_str_arr(tokens, tok_len);
                     return NULL;
                 }
             }
@@ -175,7 +176,7 @@ char **split_string(char *str, char dil)
         if (!sb_append_char(&sb, str[i]))
         {
             free(sb.str);
-            free_tokens(tokens, tok_len);
+            free_str_arr(tokens, tok_len);
             return NULL;
         }
         i++;
@@ -187,7 +188,7 @@ char **split_string(char *str, char dil)
         if (!tmp)
         {
             free(sb.str);
-            free_tokens(tokens, tok_len);
+            free_str_arr(tokens, tok_len);
             return NULL;
         }
         tokens = tmp;

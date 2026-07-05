@@ -8,7 +8,7 @@ typedef struct s_builder {
     int capacity;
 } t_builder;
 
-typeder enum e_quote {
+typedef enum e_quote {
     NORMAL,
     SINGLE_QUOTE,
     DOUBLE_QUOTE
@@ -89,7 +89,7 @@ void print_ast(t_ast_node *node, int depth);
 int expand_ast (t_ast_node *node, t_env **env_list);
 
 // executor functions
-void execute_ast (t_ast_node *node, t_env *env_list);
+void execute_ast (t_ast_node *node, t_env **env_list);
 
 // builtin cmd functions
 int builtin_echo(char **args, t_env **env_list);
@@ -99,5 +99,10 @@ int builtin_export(char **args, t_env **env_list);
 int builtin_unset(char **args, t_env **env_list);
 int builtin_env(char **args, t_env **env_list);
 int builtin_exit(char **args, t_env **env_list);
+
+// string builder functions
+int sb_init (t_builder *sb);
+int sb_append_char (t_builder *sb, char c);
+int sb_append_str (t_builder *sb, const char* str);
 
 # endif
