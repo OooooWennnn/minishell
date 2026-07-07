@@ -4,7 +4,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
-// cc -Wall $(find src -name "*.c") -I inc -lreadline -o minishell
+// gcc -Wall $(find src -name "*.c") -I inc -lreadline -o minishell
 
 int main(int argc, char **argv, char **envp)
 {

@@ -149,3 +149,77 @@ void update_env_value(const char *key, const char *value, t_env **env_list) {
         curr = curr->next;
     }
 }
+
+// Count total env list
+int env_count (t_env *env) {
+    int count = 0;
+    while (env) {
+        count++;
+        env = env->next;
+    }
+    return count;
+}
+
+// Consolidate key and value of a node and return as a string
+char *env_to_string (t_env *node) {
+    if (!node) return NULL;
+
+    size_t key_len = strlen(node->key);
+    size_t val_len = strlen(node->value);
+
+    int len = key_len + val_len + 2;
+    char *str = (char*)malloc(sizeof(char) * len);
+    if (!str) return NULL;
+
+    size_t i = 0;
+    while (i < key_len) {
+        str[i] = node->key[i];
+        i++;
+    }
+    str[i++] = '=';
+
+    size_t j = 0;
+    while (j < val_len) {
+        str[i] = node->value[j];
+        i++;
+        j++;
+    }
+    str[i] = '\0';
+
+    return str;
+}
+
+void envp_free (char **envp) {
+    if (!envp) return;
+    for (int i = 0; envp[i] != NULL; i++) {
+        free(envp[i]);
+    }
+    free(envp);
+}
+
+// Convert environment list to array
+char **env_list_to_array (t_env *env_list) {
+    int count;
+    char **envp;
+    int i;
+
+    if (!env_list) return NULL;
+
+    count = env_count (env_list);
+    envp = (char**)calloc((count + 1), sizeof(char*));
+    if (!envp) return NULL;
+
+    i = 0;
+    while (i < count) {
+        envp[i] = env_to_string(env_list);
+        if (!envp[i]) {
+            envp_free (envp);
+            return NULL;
+        } 
+        env_list = env_list->next;
+        i++;
+    }
+    envp[i] = NULL;
+
+    return envp;
+}

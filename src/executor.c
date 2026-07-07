@@ -108,6 +108,10 @@ char *find_cmd_path (char *cmd, t_env **env_list) {
 }
 
 void execute_cmd(t_ast_node *node, t_env **env_list) {
+    char *path = NULL;
+    char **envp = NULL;
+    pid_t pid;
+
     if (node->args == NULL || node->args[0] == NULL) return;
 
     // if built-in, execute built-in cmd logic
@@ -115,25 +119,32 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
         return;
     }
 
-    extern char **environ;
-
-    pid_t pid = fork();
+    pid = fork();
     if (pid < 0) {
         perror("fork error");
         return;
     }
     else if (pid == 0) {
         // child process
-        // char *envp[] = {NULL};
-        char *cmd_path = find_cmd_path(node->args[0], env_list);
-        if (cmd_path == NULL) {
+        path = find_cmd_path(node->args[0], env_list);
+        if (path == NULL) {
             fprintf(stderr, "command not found: %s\n", node->args[0]);
-            exit(127);
+            exit(127);  // command not found code
         }
-        execve(cmd_path, node->args, environ);
+
+        envp = env_list_to_array (*env_list);
+        if (!envp) {
+            free (path);
+            fprintf(stderr, "envp error\n");
+            exit(1);
+        }
+
+        execve(path, node->args, envp);
         perror("execve");
+        free(path);
+        envp_free(envp);
         exit(126);
-        printf("child process (pid: %d)\n", getpid());
+        // printf("child process (pid: %d)\n", getpid());
 
     }
     else {
