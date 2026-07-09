@@ -119,6 +119,13 @@ void envadd_back(t_env **env_list, t_env *new_node) {
     curr->next = new_node;
 }
 
+void free_env_node (t_env *node) {
+    if (!node) return;
+    free(node->key);
+    free(node->value);
+    free(node);
+}
+
 char *get_env_value(const char *key, t_env **env_list) {
     if (env_list == NULL || *env_list == NULL) {
         return NULL;
@@ -148,6 +155,34 @@ void update_env_value(const char *key, const char *value, t_env **env_list) {
         }
         curr = curr->next;
     }
+}
+
+// remove a node with matching key from env list, return 1 on success
+int remove_env_node (char *key, t_env **env_list) {
+    t_env *curr;
+    t_env *prev;
+
+    if (!env_list || !*env_list || !key) return 0;
+
+    curr = *env_list;
+    prev = NULL;
+
+    while (curr) {
+        if (strcmp(curr->key, key) == 0) {
+            if (prev == NULL) {
+                *env_list = curr->next;
+            }
+            else {
+                prev->next = curr->next;
+            }
+
+            free_env_node(curr);
+            return 1;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+    return 0;
 }
 
 // Count total env list
