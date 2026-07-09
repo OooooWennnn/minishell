@@ -100,14 +100,14 @@ t_env *envnew(char *key, char *value) {
  * @param env_list Pointer to the head pointer of the environment variable list.
  * @param new_node Pointer to the new t_env node to be added.
  */
-void envadd_back(t_env **env_list, t_env *new_node) {
+int append_env_node(t_env **env_list, t_env *new_node) {
     if (env_list == NULL || new_node == NULL) {
-        return;
+        return 0;
     }
 
     if (*env_list == NULL) {
         *env_list = new_node;
-        return;
+        return 0;
     }
 
     t_env *curr = *env_list;
@@ -117,6 +117,7 @@ void envadd_back(t_env **env_list, t_env *new_node) {
     }
 
     curr->next = new_node;
+    return 1;
 }
 
 void free_env_node (t_env *node) {
@@ -141,20 +142,24 @@ char *get_env_value(const char *key, t_env **env_list) {
     return NULL;
 }
 
-void update_env_value(const char *key, const char *value, t_env **env_list) {
-    t_env *curr = *env_list;
+// find and return env node with matching key
+t_env *find_env_node(t_env *env, char *key) {
+    if (!env || !key) return NULL;
 
-    while (curr != NULL) {
-        if (strncmp(curr->key, key, strlen(key) + 1) == 0) {
-            if (curr->value != NULL) {
-                free(curr->value);
-            }
-
-            curr->value = strdup(value);
-            return;
+    while(env) {
+        if (strcmp(env->key, key) == 0) {
+            return env;
         }
-        curr = curr->next;
+        env = env->next;
     }
+    return NULL;
+}
+
+int update_env_value(t_env *node, char *value) {
+    if (!node || !value) return 0;
+
+    if (update_string(&node->value, value)) return 1;
+    return 0;
 }
 
 // remove a node with matching key from env list, return 1 on success

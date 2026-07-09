@@ -33,26 +33,29 @@ int update_quote_state(char c, int current_state) {
     return current_state;
 }
 
-// int update_string (char *str, char *new_str) {
-//     int len = 0;
-//     while (new_str[len] != '\0') {
-//         len++;
-//     }
+int update_string (char **str, char *new_str) {
+    int len;
+    int i;
+    char *tmp;
 
-//     char *tmp = (char*)malloc(sizeof(char) * (len + 1));
-//     if (tmp) {
-//         return NULL;
-//     }
-//     new_token->value = (char*)malloc(sizeof(char) * (len + 1));
-//     if (!new_token->value) {
-//         free(new_token);
-//         return NULL;
-//     }
+    len = 0;
+    while (new_str[len] != '\0') {
+        len++;
+    }
 
-//     int j = 0;
-//     while (j < len) {
-//         new_token->value[j] = input[start + j];
-//         j++;
-//     }
-//     new_token->value[j] = '\0';
-// }
+    tmp = (char*)malloc(sizeof(char) * (len + 1));
+    if (!tmp) {
+        return 0;
+    }
+
+    i = 0;
+    while (i < len) {
+        tmp[i] = new_str[i];
+        i++;
+    }
+    tmp[i] = '\0';
+
+    free(*str);
+    *str = tmp;
+    return 1;
+}

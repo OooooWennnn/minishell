@@ -14,7 +14,7 @@ int main(int argc, char **argv, char **envp)
     while (envp[i] != NULL) {
         t_env *node = parse_env_node(envp[i]);
         if (node != NULL) {
-            envadd_back(&env_list, node);
+            append_env_node(&env_list, node);
         }
         i++;
     }
@@ -36,11 +36,12 @@ int main(int argc, char **argv, char **envp)
                 t_ast_node *ast = generate_ast(tokens);
 
                 if (ast != NULL) {
+                    expand_ast(ast, &env_list);
+                    
                     printf("\n=== 🛠️ AST DEBUG 🛠️ ===\n");
                     print_ast(ast, 0);
                     printf("========================\n\n");
 
-                    // expand_ast(ast, )
                     execute_ast(ast, &env_list);
 
                     free_ast(ast);

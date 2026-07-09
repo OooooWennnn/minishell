@@ -77,14 +77,16 @@ int builtin_exit(char **args, t_env **env_list);
 // utils functions
 void free_tokens (t_token *head);
 int update_quote_state(char c, int current_state);
+int update_string (char **str, char *new_str);
 
 
 // env_utils functions
 t_env *parse_env_node(const char* str);
 t_env *envnew(char *key, char *value);
-void envadd_back(t_env **env_list, t_env *new_node);
+int append_env_node(t_env **env_list, t_env *new_node);
 char *get_env_value(const char *key, t_env **env_list);
-void update_env_value(const char *key, const char *value, t_env **env_list);
+t_env *find_env_node(t_env *env, char *key);
+int update_env_value(t_env *node, char *value);
 void envp_free (char **envp);
 char **env_list_to_array (t_env *env_list);
 int remove_env_node (char *key, t_env **env_list);

@@ -31,11 +31,13 @@ int builtin_cd(char **args, t_env **env_list) {
     char *prev_pwd = get_env_value("PWD", env_list);
 
     if (prev_pwd != NULL) {
-        update_env_value("OLDPWD", prev_pwd, env_list);
+        t_env *oldpwd_node = find_env_node(*env_list, "OLDPWD");
+        update_env_value(oldpwd_node, prev_pwd);
     }
 
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
-        update_env_value("PWD", cwd, env_list);
+        t_env *pwd_node = find_env_node(*env_list, "PWD");
+        update_env_value(pwd_node, cwd);
     }
     else {
         perror("minishell: getcwd failed");
