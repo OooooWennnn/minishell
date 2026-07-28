@@ -1,4 +1,5 @@
 #include "../inc/minishell.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 #define PROTECTED_SPACE '\x01'
@@ -49,6 +50,23 @@ char *expand_string(char *arg, t_env **env_list)
                 return NULL;
             }
             i++;
+            continue;
+        }
+
+        if (arg[i] == '$' && arg[i + 1] == '?' && quote_state != SINGLE_QUOTE)
+        {
+            char exit_code_str[12];
+
+            // convert the global exit code to a string
+            snprintf(exit_code_str, sizeof(exit_code_str), "%d", g_exit_code);
+
+            if (sb_append_str(&sb, exit_code_str) == 0)
+            {
+                free(sb.str);
+                return NULL;
+            }
+
+            i += 2; // Skip over '$?'
             continue;
         }
 

@@ -1,6 +1,8 @@
 # ifndef MINISHELL_H
 # define MINISHELL_H
 
+extern int g_exit_code;
+
 // string builder
 typedef struct s_builder {
     char *str;

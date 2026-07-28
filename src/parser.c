@@ -93,7 +93,14 @@ void free_ast (t_ast_node *node) {
 }
 
 t_ast_node *parse_cmd (t_token **curr) {
+    if (!curr || !*curr || (*curr)->type != TOKEN_WORD)
+        return (NULL);
+
     t_ast_node *cmd_node = create_node(NODE_CMD);
+
+    if (!cmd_node) {
+        return NULL;
+    }
 
     while ((*curr) != NULL && (*curr)->type == TOKEN_WORD) {
         add_argument(cmd_node, (*curr)->value);
@@ -136,25 +143,52 @@ t_ast_node *parse_redir (t_token **curr) {
     return node;
 }
 
-t_ast_node *parse_pipe (t_token **curr) {
-    t_ast_node *node = parse_redir(curr);
+t_ast_node *parse_pipe(t_token **curr)
+{
+    t_ast_node *node;
 
-    while ((*curr) != NULL && (*curr)->type == TOKEN_PIPE) {
+    if (!curr || !*curr)
+        return (NULL);
+
+    if ((*curr)->type == TOKEN_PIPE)
+    {
+        fprintf(stderr,
+            "Syntax error: invalid pipe or consecutive pipe sign\n");
+        return (NULL);
+    }
+
+    node = parse_redir(curr);
+    if (!node)
+        return (NULL);
+
+    while (*curr && (*curr)->type == TOKEN_PIPE)
+    {
+        t_ast_node *right;
+        t_ast_node *pipe_node;
+
         *curr = (*curr)->next;
 
-        if (*curr == NULL || (*curr)->type == TOKEN_PIPE) {
-            printf("Syntax error: invalid pipe or consecutive pipe sign\n");
+        if (!*curr || (*curr)->type == TOKEN_PIPE)
+        {
+            fprintf(stderr,
+                "Syntax error: invalid pipe or consecutive pipe sign\n");
             free_ast(node);
-            return NULL;
+            return (NULL);
         }
 
-        t_ast_node *right = parse_redir(curr);
+        right = parse_redir(curr);
+        if (!right)
+        {
+            free_ast(node);
+            return (NULL);
+        }
 
-        t_ast_node *pipe_node = calloc(1, sizeof(t_ast_node));
-        if (!pipe_node) {
+        pipe_node = calloc(1, sizeof(t_ast_node));
+        if (!pipe_node)
+        {
             free_ast(node);
             free_ast(right);
-            return NULL;
+            return (NULL);
         }
 
         pipe_node->type = NODE_PIPE;
@@ -162,7 +196,8 @@ t_ast_node *parse_pipe (t_token **curr) {
         pipe_node->right = right;
         node = pipe_node;
     }
-    return node;
+
+    return (node);
 }
 
 // takes token list and generate ast

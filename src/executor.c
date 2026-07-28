@@ -33,7 +33,7 @@ int run_builtin (char **args, t_env **env_list) {
 
             // Update global exit code for $?
             // 0 on success 1 on fail
-            // g_exit_code = exit_code;
+            g_exit_code = exit_code;
             return 1;
         }
         i++;
@@ -151,6 +151,10 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
         int status;
         printf("parent process (child pid: %d)\n", pid);
         waitpid(pid, &status, 0);
+
+        if (WIFEXITED(status)) {
+            g_exit_code = WEXITSTATUS(status);
+        }
     }
 }
 

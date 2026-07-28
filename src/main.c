@@ -5,6 +5,7 @@
 #include <readline/history.h>
 
 // gcc -Wall $(find src -name "*.c") -I inc -lreadline -o minishell
+int g_exit_code = 0;
 
 int main(int argc, char **argv, char **envp)
 {
