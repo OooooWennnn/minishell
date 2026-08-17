@@ -129,6 +129,7 @@ t_ast_node *parse_redir (t_token **curr) {
         t_ast_node *redir_node = calloc(1, sizeof(t_ast_node));
         if (!redir_node) {
             free_ast(node);
+            free(file_val);
             return NULL;
         }
 

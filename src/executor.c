@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <fcntl.h>
+#include <errno.h>
 
 // builtin functions return 1 on success
 t_builtin g_builtins[] = {
@@ -158,6 +160,86 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
     }
 }
 
+static int get_target_fd (t_ast_node *node) {
+    if (node->redir_type == TOKEN_REDIR_IN || node->redir_type == TOKEN_HEREDOC) {
+        return STDIN_FILENO;
+    }
+    else if (node->redir_type == TOKEN_REDIR_OUT || node->redir_type == TOKEN_APPEND) {
+        return STDOUT_FILENO;
+    }
+    return -1; // invalid redirection type
+}
+
+static int open_redir_file (t_ast_node *node) {
+    int fd;
+    if (node->redir_type == TOKEN_REDIR_IN) {
+        fd = open(node->value, O_RDONLY);
+    }
+    else if (node->redir_type == TOKEN_REDIR_OUT) {
+        fd = open(node->value, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    }
+    else if (node->redir_type == TOKEN_APPEND) {
+        fd = open(node->value, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    }
+    else {
+        return -1;
+    }
+    return fd;
+}
+
+void execute_redir (t_ast_node *node, t_env **env_list) {
+    int fd;
+    int target_fd;
+    int saved_fd;
+
+    // determine the target file descriptor based on redirection type
+    target_fd = get_target_fd (node);
+    if (target_fd == -1) {
+        fprintf(stderr, "minishell: invalid redirection type\n");
+        g_exit_code = 1;
+        return;
+    }
+
+    // save the current file descriptor (stdout or stdin) to restore later
+    saved_fd = dup(target_fd);
+    if (saved_fd == -1) {
+        perror("dup:");
+        g_exit_code = 1;
+        return;
+    }
+
+    // open the file for redirection based on the redirection type (node->redir_type)
+    fd = open_redir_file (node);
+    if (fd == -1) {
+        fprintf(stderr, "minishell %s: %s\n", node->value, strerror(errno));
+        close(saved_fd);
+        g_exit_code = 1;
+        return;
+    }
+
+    // redirect the target file descriptor to the opened file descriptor
+    if (dup2(fd, target_fd) == -1) {
+        perror("dup2");
+        close(fd);
+        close(saved_fd);
+        return;
+    }
+
+    // close the opened file to prevent resource leaks
+    close(fd);
+
+    // execute the command or pipeline in the left subtree of the AST
+    execute_ast(node->left, env_list);
+
+    // restore the original file descriptor to its previous state
+    if (dup2(saved_fd, target_fd) == -1) {
+        perror("dup2:");
+        g_exit_code = 1;
+    }
+    // close the saved file descriptor to prevent resource leaks
+    close(saved_fd);
+}
+
 void execute_ast (t_ast_node *node, t_env **env_list) {
     if (node == NULL) {
         return;
@@ -167,7 +249,7 @@ void execute_ast (t_ast_node *node, t_env **env_list) {
         // execute_pipe(node, env_list);
     }
     else if (node->type == NODE_REDIR) {
-        // execute_redir(node, env_list);
+        execute_redir(node, env_list);
     }
     else if (node->type == NODE_CMD) {
         execute_cmd(node, env_list);

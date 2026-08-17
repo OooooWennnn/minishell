@@ -61,10 +61,14 @@ graph TD
 
 ## Core Architecture & Troubleshooting
 
-* **Issue 1: Space Evaporation and Nested Quotes in Lexer**
-  * **Cause:** A basic space-based split caused the Lexer to incorrectly break spaces inside strings or fail on complex nested quotes.
-  * **Solution:** Implemented an `in_quotes` toggle flag (`int in_quotes = 0;`). When the flag is active, the Lexer securely absorbs spaces as string literals instead of splitting them, entirely preventing space evaporation.
+* **Issue 1: Spaces Inside Quoted Strings**
+  * **Cause:** Splitting input only on spaces incorrectly separated words inside single and double quotes.
+  * **Solution:** Added quote-state tracking so that only unquoted spaces divide tokens.
 
-* **Issue 2: Quote Parsing Bug in Parser Module**
-  * **Cause:** Tokens containing specific quote structures were occasionally misinterpreted during the AST (Abstract Syntax Tree) generation phase in the parser module.
-  * **Solution:** Fixed the internal quote parsing logic within the parser module to accurately preserve quote boundaries passed down from the Lexer, ensuring robust command execution.
+* **Issue 2: Quote Preservation During Expansion**
+  * **Cause:** Removing quotes too early discarded information needed for variable expansion and word splitting.
+  * **Solution:** Preserved quote information through tokenization and expansion, then removed quotes during the final splitting stage.
+
+* **Issue 3: File Descriptor Restoration After Redirection**
+  * **Cause:** Applying `dup2()` directly changes the shell process's standard input or output. Without restoration, later commands and prompts may continue reading from or writing to the redirected file.
+  * **Solution:** in progress...
