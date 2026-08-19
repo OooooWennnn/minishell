@@ -1,9 +1,9 @@
 # Minishell
 > Minimal UNIX shell built with C
 
-![C](https://img.shields.io/badge/language-C-blue.svg)
+<!-- ![C](https://img.shields.io/badge/language-C-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)
-![Status](https://img.shields.io/badge/status-In%20Progress-orange.svg)
+![Status](https://img.shields.io/badge/status-In%20Progress-orange.svg) -->
 
 ### Key Features
 
@@ -69,6 +69,10 @@ graph TD
   * **Cause:** Removing quotes too early discarded information needed for variable expansion and word splitting.
   * **Solution:** Preserved quote information through tokenization and expansion, then removed quotes during the final splitting stage.
 
-* **Issue 3: File Descriptor Restoration After Redirection**
-  * **Cause:** Applying `dup2()` directly changes the shell process's standard input or output. Without restoration, later commands and prompts may continue reading from or writing to the redirected file.
-  * **Solution:** in progress...
+* **Issue 3: Chained Redirections Applied in the Wrong Order**
+  * **Cause:** Each new redirection wraps the previous AST node. Traversing from the root caused the last redirection to be applied first. For example, `echo hello > a.txt > b.txt` incorrectly wrote the output to `a.txt`.
+  * **Solution:** Extracted the executable node and recursively applied redirections from the innermost node outward. This keeps the original left-to-right order.
+
+* **Issue 4: Standard Input and Output Were Not Restored**
+  * **Cause:** `dup2()` replaces the shell's current stdin or stdout, so the next command could still use the previous redirected file.
+  * **Solution:** Saved stdin and stdout with `dup()` before applying redirections, then restored them with `dup2()` after the command finished.

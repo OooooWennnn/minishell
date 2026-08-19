@@ -29,7 +29,7 @@ int run_builtin (char **args, t_env **env_list) {
     while (g_builtins[i].cmd_name != NULL) {
         if (strncmp(args[0], g_builtins[i].cmd_name, strlen(args[0]) + 1) == 0) {
             
-            printf("command %s matched with %s\n", args[0], g_builtins[i].cmd_name);
+            // printf("command %s matched with %s\n", args[0], g_builtins[i].cmd_name);
 
             int exit_code = g_builtins[i].func(args, env_list);
 
@@ -151,7 +151,7 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
     }
     else {
         int status;
-        printf("parent process (child pid: %d)\n", pid);
+        // printf("parent process (child pid: %d)\n", pid);
         waitpid(pid, &status, 0);
 
         if (WIFEXITED(status)) {
@@ -187,57 +187,104 @@ static int open_redir_file (t_ast_node *node) {
     return fd;
 }
 
-void execute_redir (t_ast_node *node, t_env **env_list) {
-    int fd;
+// skips over redir nodes to find the next cmd or pipe node to execute
+static t_ast_node *get_exec_node (t_ast_node *node) {
+    while (node != NULL && node->type == NODE_REDIR) {
+        node = node->left;
+    }
+    return node;
+}
+
+// applies a single redir node
+static int apply_redir (t_ast_node *node) {
     int target_fd;
-    int saved_fd;
+    int redir_fd;
 
     // determine the target file descriptor based on redirection type
-    target_fd = get_target_fd (node);
+    target_fd = get_target_fd(node);
     if (target_fd == -1) {
         fprintf(stderr, "minishell: invalid redirection type\n");
         g_exit_code = 1;
-        return;
+        return -1;
+    }
+    
+    // open the file for redirection based on the redirection type (node->redir_type)
+    redir_fd = open_redir_file(node);
+    if (redir_fd == -1) {
+        fprintf(stderr, "minishell: %s: %s\n", node->value, strerror(errno));
+        g_exit_code = 1;
+        return -1;
     }
 
-    // save the current file descriptor (stdout or stdin) to restore later
-    saved_fd = dup(target_fd);
-    if (saved_fd == -1) {
+    // redirect the target file descriptor to the opened file descriptor
+    if (dup2(redir_fd, target_fd) == -1) {
+        perror("dup2");
+        close(redir_fd);
+        g_exit_code = 1;
+        return -1;
+    }
+
+    // close the opened file to prevent resource leaks
+    close(redir_fd);
+    return 0;
+}
+
+// recursively applies redir nodes
+static int chain_redirs (t_ast_node *node) {
+    if (node == NULL || node->type != NODE_REDIR) {
+        return 0;
+    }
+
+    if (chain_redirs(node->left) == -1) {
+        return -1;
+    }
+
+    return apply_redir(node);
+}
+
+void execute_redir (t_ast_node *node, t_env **env_list) {
+    t_ast_node *exec_node;
+    int saved_stdin_fd;
+    int saved_stdout_fd;
+
+    // save stdin fd to restore later
+    saved_stdin_fd = dup(STDIN_FILENO);
+    if (saved_stdin_fd == -1) {
         perror("dup:");
         g_exit_code = 1;
         return;
     }
 
-    // open the file for redirection based on the redirection type (node->redir_type)
-    fd = open_redir_file (node);
-    if (fd == -1) {
-        fprintf(stderr, "minishell %s: %s\n", node->value, strerror(errno));
-        close(saved_fd);
+    // save stdout fd to restore later
+    saved_stdout_fd = dup(STDOUT_FILENO);
+    if (saved_stdout_fd == -1) {
+        perror("dup:");
+        close(saved_stdin_fd);
         g_exit_code = 1;
         return;
     }
 
-    // redirect the target file descriptor to the opened file descriptor
-    if (dup2(fd, target_fd) == -1) {
+    // find executable node 
+    exec_node = get_exec_node(node);
+
+    // apply redirections recursively and execute exec_node if it exists
+    if (exec_node != NULL && chain_redirs(node) == 0) {
+        execute_ast(exec_node, env_list);
+    }
+
+    // restore og stdin and stdout fds
+    if (dup2(saved_stdin_fd, STDIN_FILENO) == -1) {
         perror("dup2");
-        close(fd);
-        close(saved_fd);
-        return;
-    }
-
-    // close the opened file to prevent resource leaks
-    close(fd);
-
-    // execute the command or pipeline in the left subtree of the AST
-    execute_ast(node->left, env_list);
-
-    // restore the original file descriptor to its previous state
-    if (dup2(saved_fd, target_fd) == -1) {
-        perror("dup2:");
         g_exit_code = 1;
     }
-    // close the saved file descriptor to prevent resource leaks
-    close(saved_fd);
+    if (dup2(saved_stdout_fd, STDOUT_FILENO) == -1) {
+        perror("dup2");
+        g_exit_code = 1;
+    }
+
+    // close saved fds
+    close(saved_stdin_fd);
+    close(saved_stdout_fd);
 }
 
 void execute_ast (t_ast_node *node, t_env **env_list) {
