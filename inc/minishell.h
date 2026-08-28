@@ -56,6 +56,9 @@ typedef struct s_ast_node {
     t_token_type redir_type;
     char *value;
 
+    // used by HEREDOC
+    int heredoc_fd;
+
     struct s_ast_node *left;
     struct s_ast_node *right;
 } t_ast_node;
@@ -105,6 +108,7 @@ void print_ast(t_ast_node *node, int depth);
 int expand_ast (t_ast_node *node, t_env **env_list);
 
 // executor functions
+void execute_command (t_ast_node *root, t_env **env_list);
 void execute_ast (t_ast_node *node, t_env **env_list);
 
 // string builder functions

@@ -1,6 +1,7 @@
 #include "../inc/minishell.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 char *copy_string (char *str) {
     int len = 0;
@@ -33,6 +34,7 @@ t_ast_node *create_node (t_node_type type) {
     }
 
     node->type = type;
+    node->heredoc_fd = -1;
 
     return node;
 }
@@ -76,6 +78,11 @@ void free_ast (t_ast_node *node) {
 
     free_ast(node->left);
     free_ast(node->right);
+
+    if (node->heredoc_fd != -1){
+        close(node->heredoc_fd);
+        node->heredoc_fd = -1;
+    }
 
     if (node->type == NODE_CMD && node->args != NULL) {
         int i = 0;
@@ -126,18 +133,17 @@ t_ast_node *parse_redir (t_token **curr) {
         char *file_val = copy_string((*curr)->value);
         *curr = (*curr)->next;
 
-        t_ast_node *redir_node = calloc(1, sizeof(t_ast_node));
+        t_ast_node *redir_node = create_node(NODE_REDIR);
         if (!redir_node) {
             free_ast(node);
             free(file_val);
             return NULL;
         }
 
-        redir_node->type = NODE_REDIR;
         redir_node->redir_type = redir_type;
         redir_node->value = file_val;
-        
         redir_node->left = node;
+        
         node = redir_node;
     }
 
@@ -184,7 +190,7 @@ t_ast_node *parse_pipe(t_token **curr)
             return (NULL);
         }
 
-        pipe_node = calloc(1, sizeof(t_ast_node));
+        pipe_node = create_node(NODE_PIPE);
         if (!pipe_node)
         {
             free_ast(node);
@@ -192,7 +198,6 @@ t_ast_node *parse_pipe(t_token **curr)
             return (NULL);
         }
 
-        pipe_node->type = NODE_PIPE;
         pipe_node->left = node;
         pipe_node->right = right;
         node = pipe_node;
@@ -234,7 +239,7 @@ void print_ast(t_ast_node *node, int depth) {
         printf("\n");
     } 
     else if (node->type == NODE_REDIR) {
-        printf("┣━ [REDIR] 타입: %d, 타겟: '%s'\n", node->redir_type, node->value);
+        printf("┣━ [REDIR] 타입: %d, 타겟: '%s', heredoc_fd: %d\n", node->redir_type, node->value, node->heredoc_fd);
     }
 
     // 왼쪽, 오른쪽 자식 노드로 계속 파고들기

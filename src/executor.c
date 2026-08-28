@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 // builtin functions return 1 on success
 t_builtin g_builtins[] = {
@@ -160,6 +162,159 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
     }
 }
 
+// create temp file path for heredoc
+static char* create_heredoc_path() {
+    static int index = 0;
+    char *path;
+    int length;
+    int written;
+
+    length = snprintf(NULL, 0, "/tmp/.minishell_heredoc_%ld_%u", (long)getpid(), index);
+
+    if (length < 0) {
+        return (NULL);
+    }
+
+    path = malloc((size_t)length + 1);
+    if (path == NULL) {
+        return (NULL);
+    }
+
+    written = snprintf(path, (size_t)length + 1, "/tmp/.minishell_heredoc_%ld_%u", (long)getpid(), index);
+
+    if (written != length){
+        free(path);
+        return (NULL);
+    }
+
+    index++;
+    return path;
+}
+
+// open temp heredoc file
+static int create_and_open_heredoc_temp (char** res_path) {
+    char* path;
+    int fd;
+    int saved_errno;
+
+    while(1) {
+        path = create_heredoc_path();
+        if (path == NULL) {
+            return -1;
+        }
+
+        fd = open(path, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        if (fd != -1) {
+            *res_path = path;
+            return fd;
+        }
+
+        saved_errno = errno;
+        free(path);
+
+        if (saved_errno != EEXIST) {
+            errno = saved_errno;
+            return -1;
+        }
+    }
+}
+
+// receive inputs, write it in temp file, return read fd
+static int collect_heredoc (const char* dil) {
+    char* path;
+    char* line;
+    int write_fd;
+    int read_fd;
+
+    path = NULL;
+    write_fd = create_and_open_heredoc_temp(&path);
+    if (write_fd == -1) {
+        perror("heredoc");
+        return -1;
+    }
+
+    while (1) {
+        line = readline("> ");
+
+        if (line == NULL) {
+            fprintf(stderr, "minishell: warning: here-document delimited by end-of-file (wanted `%s')\n", dil);
+            break;
+        }
+
+        if (strcmp(line, dil) == 0) {
+            free(line);
+            break;
+        }
+
+        if (write(write_fd, line, strlen(line)) == -1 || write(write_fd, "\n", 1) == -1) {
+            perror("heredoc");
+            free(line);
+            close(write_fd);
+            unlink(path);
+            free(path);
+            return -1;
+        }
+        free(line);
+    }
+    close(write_fd);
+
+    read_fd = open(path, O_RDONLY);
+    if (read_fd == -1) {
+        perror("heredoc");
+        unlink(path);
+        free(path);
+        return -1;
+    }
+    
+    unlink(path);
+    free(path);
+    
+    return read_fd;
+}
+
+static int prepare_heredocs (t_ast_node *node) {
+    if (node == NULL) {
+        return 0;
+    }
+
+    if (node->type == NODE_PIPE) {
+        if (prepare_heredocs(node->left) == -1) {
+            return -1;
+        }
+        if (prepare_heredocs(node->right) == -1) {
+            return -1;
+        }
+        return 0;
+    }
+
+    if (node->type == NODE_REDIR) {
+        if (prepare_heredocs(node->left) == -1) {
+            return -1;
+        }
+        if (node->redir_type == TOKEN_HEREDOC) {
+            node->heredoc_fd = collect_heredoc(node->value);
+            if (node->heredoc_fd == -1) {
+                return -1;
+            }
+        }
+    }
+    return 0;
+}
+
+static void close_prepared_heredocs (t_ast_node *node) {
+    if (node == NULL) {
+        return;
+    }
+
+    close_prepared_heredocs(node->left);
+    close_prepared_heredocs(node->right);
+
+    if (node->heredoc_fd != -1) {
+        close(node->heredoc_fd);
+        node->heredoc_fd = -1;
+    }
+}
+
 static int get_target_fd (t_ast_node *node) {
     if (node->redir_type == TOKEN_REDIR_IN || node->redir_type == TOKEN_HEREDOC) {
         return STDIN_FILENO;
@@ -170,7 +325,8 @@ static int get_target_fd (t_ast_node *node) {
     return -1; // invalid redirection type
 }
 
-static int open_redir_file (t_ast_node *node) {
+// open redir file or call heredoc operation and return fd
+static int get_redir_fd (t_ast_node *node) {
     int fd;
     if (node->redir_type == TOKEN_REDIR_IN) {
         fd = open(node->value, O_RDONLY);
@@ -180,6 +336,16 @@ static int open_redir_file (t_ast_node *node) {
     }
     else if (node->redir_type == TOKEN_APPEND) {
         fd = open(node->value, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    }
+    else if (node->redir_type == TOKEN_HEREDOC) {
+        if (node->heredoc_fd != -1) {
+            fd = node->heredoc_fd;
+        }
+        else {
+            errno = 0;
+            return -1;
+        }
+        node->heredoc_fd = -1;
     }
     else {
         return -1;
@@ -209,7 +375,7 @@ static int apply_redir (t_ast_node *node) {
     }
     
     // open the file for redirection based on the redirection type (node->redir_type)
-    redir_fd = open_redir_file(node);
+    redir_fd = get_redir_fd(node);
     if (redir_fd == -1) {
         fprintf(stderr, "minishell: %s: %s\n", node->value, strerror(errno));
         g_exit_code = 1;
@@ -302,4 +468,22 @@ void execute_ast (t_ast_node *node, t_env **env_list) {
         execute_cmd(node, env_list);
     }
 
+}
+
+void execute_command (t_ast_node *root, t_env **env_list) {
+    if (root == NULL) {
+        return;
+    }
+
+    if (prepare_heredocs(root) == -1) {
+        close_prepared_heredocs(root);
+
+        if (g_exit_code == 0) {
+            g_exit_code = 1;
+        }
+        return;
+    }
+    
+    execute_ast(root, env_list);
+    close_prepared_heredocs(root);
 }
