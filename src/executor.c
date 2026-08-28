@@ -453,13 +453,97 @@ void execute_redir (t_ast_node *node, t_env **env_list) {
     close(saved_stdout_fd);
 }
 
+void execute_pipe (t_ast_node *node, t_env **env_list) {
+    int pipe_fd[2];
+    pid_t left_pid;
+    pid_t right_pid;
+    // int left_status;
+    int right_status;
+
+    if (pipe(pipe_fd) == -1) {
+        perror("pipe");
+        g_exit_code = 1;
+        return;
+    }
+
+    left_pid = fork();
+    if (left_pid < 0) {
+        perror("fork");
+        close(pipe_fd[0]);
+        close(pipe_fd[1]);
+        g_exit_code = 1;
+        return;
+    }
+    else if (left_pid == 0) {
+        if (dup2(pipe_fd[1], STDOUT_FILENO) == -1) {
+            perror("dup2");
+            close(pipe_fd[0]);
+            close(pipe_fd[1]);
+            exit(1);
+        }
+
+        close(pipe_fd[0]);
+        close(pipe_fd[1]);
+
+        execute_ast(node->left, env_list);
+        exit(g_exit_code);
+    }
+
+    right_pid = fork();
+    if (right_pid < 0) {
+        perror("fork");
+        close(pipe_fd[0]);
+        close(pipe_fd[1]);
+
+        waitpid(left_pid, NULL, 0);
+
+        g_exit_code = 1;
+        return;
+    }
+    else if (right_pid == 0) {
+        if (dup2(pipe_fd[0], STDIN_FILENO) == -1) {
+            perror("dup2");
+            close(pipe_fd[0]);
+            close(pipe_fd[1]);
+            exit(1);
+        }
+
+        close(pipe_fd[0]);
+        close(pipe_fd[1]);
+
+        execute_ast(node->right, env_list);
+        exit(g_exit_code);
+    }
+
+    close(pipe_fd[0]);
+    close(pipe_fd[1]);
+
+    if (waitpid(left_pid, NULL, 0) == -1) {
+        perror("waitpid");
+        g_exit_code = 1;
+    }
+
+    if (waitpid(right_pid, &right_status, 0) == -1) {
+        perror("waitpid");
+        g_exit_code = 1;
+        return;
+    }
+
+    if (WIFEXITED(right_status)) {
+        g_exit_code = WEXITSTATUS(right_status);
+    }
+    else if (WIFSIGNALED(right_status)) {
+        g_exit_code = 128 + WTERMSIG(right_status);
+    }
+}
+
 void execute_ast (t_ast_node *node, t_env **env_list) {
     if (node == NULL) {
         return;
     }
 
     if (node->type == NODE_PIPE) {
-        // execute_pipe(node, env_list);
+        execute_pipe(node, env_list);
     }
     else if (node->type == NODE_REDIR) {
         execute_redir(node, env_list);
