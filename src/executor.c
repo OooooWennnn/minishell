@@ -123,17 +123,23 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
         return;
     }
 
+    setup_parent_signals();
+
     pid = fork();
     if (pid < 0) {
         perror("fork error");
+        setup_prompt_signals();
+        g_exit_code = 1;
         return;
     }
     else if (pid == 0) {
         // child process
+        setup_child_signals();
         path = find_cmd_path(node->args[0], env_list);
         if (path == NULL) {
             fprintf(stderr, "command not found: %s\n", node->args[0]);
-            exit(127);  // command not found code
+            g_exit_code = 127;  // command not found code
+            exit(127);
         }
 
         envp = env_list_to_array (*env_list);
@@ -150,6 +156,7 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
         exit(126);
         // printf("child process (pid: %d)\n", getpid());
 
+
     }
     else {
         int status;
@@ -159,7 +166,16 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
         if (WIFEXITED(status)) {
             g_exit_code = WEXITSTATUS(status);
         }
+        else if (WIFSIGNALED(status)) {
+            int signal_number = WTERMSIG(status);
+            g_exit_code = 128 + WTERMSIG(status);
+
+            if (signal_number == SIGINT || signal_number == SIGQUIT) {
+                write(STDOUT_FILENO, "\n", 1);
+            }
+        }
     }
+    setup_prompt_signals();
 }
 
 // create temp file path for heredoc
@@ -219,6 +235,13 @@ static int create_and_open_heredoc_temp (char** res_path) {
     }
 }
 
+static int heredoc_event_hook(void) {
+    if (heredoc_interrupted) {
+        rl_done = 1;
+    }
+    return 0;
+}
+
 // receive inputs, write it in temp file, return read fd
 static int collect_heredoc (const char* dil) {
     char* path;
@@ -234,7 +257,19 @@ static int collect_heredoc (const char* dil) {
     }
 
     while (1) {
-        line = readline("> ");
+        rl_done = 0;
+        rl_event_hook = heredoc_event_hook;
+
+        line = readline("heredoc> ");
+        rl_event_hook = NULL;
+
+        if (heredoc_interrupted){
+            free(line);
+            close(write_fd);
+            unlink(path);
+            free(path);
+            return -1;
+        }
 
         if (line == NULL) {
             fprintf(stderr, "minishell: warning: here-document delimited by end-of-file (wanted `%s')\n", dil);
@@ -466,15 +501,19 @@ void execute_pipe (t_ast_node *node, t_env **env_list) {
         return;
     }
 
+    setup_parent_signals();
+    
     left_pid = fork();
     if (left_pid < 0) {
         perror("fork");
         close(pipe_fd[0]);
         close(pipe_fd[1]);
+        setup_prompt_signals();
         g_exit_code = 1;
         return;
     }
     else if (left_pid == 0) {
+        setup_child_signals();
         if (dup2(pipe_fd[1], STDOUT_FILENO) == -1) {
             perror("dup2");
             close(pipe_fd[0]);
@@ -494,6 +533,7 @@ void execute_pipe (t_ast_node *node, t_env **env_list) {
         perror("fork");
         close(pipe_fd[0]);
         close(pipe_fd[1]);
+        setup_prompt_signals();
 
         waitpid(left_pid, NULL, 0);
 
@@ -501,6 +541,7 @@ void execute_pipe (t_ast_node *node, t_env **env_list) {
         return;
     }
     else if (right_pid == 0) {
+        setup_child_signals();
         if (dup2(pipe_fd[0], STDIN_FILENO) == -1) {
             perror("dup2");
             close(pipe_fd[0]);
@@ -555,19 +596,31 @@ void execute_ast (t_ast_node *node, t_env **env_list) {
 }
 
 void execute_command (t_ast_node *root, t_env **env_list) {
+    int heredoc_result;
+    
     if (root == NULL) {
         return;
     }
 
-    if (prepare_heredocs(root) == -1) {
+    heredoc_interrupted = 0;
+    setup_heredoc_signals();
+
+    heredoc_result = prepare_heredocs(root);
+
+    setup_prompt_signals();
+
+    if (heredoc_result == -1) {
         close_prepared_heredocs(root);
 
-        if (g_exit_code == 0) {
+        if (heredoc_interrupted) {
+            g_exit_code = 130;
+        }
+        else {
             g_exit_code = 1;
         }
         return;
     }
-    
+
     execute_ast(root, env_list);
     close_prepared_heredocs(root);
 }

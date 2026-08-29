@@ -20,6 +20,8 @@ int main(int argc, char **argv, char **envp)
         i++;
     }
 
+    setup_prompt_signals();
+
     while(1) {
         char *input;
         input = readline("minishell> ");

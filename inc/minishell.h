@@ -2,6 +2,7 @@
 # define MINISHELL_H
 
 extern int g_exit_code;
+extern volatile int heredoc_interrupted;
 
 // string builder
 typedef struct s_builder {
@@ -115,5 +116,11 @@ void execute_ast (t_ast_node *node, t_env **env_list);
 int sb_init (t_builder *sb);
 int sb_append_char (t_builder *sb, char c);
 int sb_append_str (t_builder *sb, const char* str);
+
+// signals functions
+void setup_prompt_signals(void);
+void setup_parent_signals(void);
+void setup_child_signals(void);
+void setup_heredoc_signals(void);
 
 # endif
