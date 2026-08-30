@@ -22,7 +22,7 @@ int main(int argc, char **argv, char **envp)
 
     setup_prompt_signals();
 
-    while(1) {
+    while(g_should_exit == 0) {
         char *input;
         input = readline("minishell> ");
 
@@ -40,17 +40,15 @@ int main(int argc, char **argv, char **envp)
 
                 if (ast != NULL) {
                     expand_ast(ast, &env_list);
-                    
-                    printf("\n=== 🛠️ AST DEBUG 🛠️ ===\n");
-                    print_ast(ast, 0);
-                    printf("========================\n\n");
-
                     execute_command(ast, &env_list);
-
                     free_ast(ast);
                 }
             }
         }
         free(input);
     }
+    rl_clear_history();
+    free_env_list(env_list);
+
+    return g_exit_code;
 }

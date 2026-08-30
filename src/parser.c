@@ -126,6 +126,7 @@ t_ast_node *parse_redir (t_token **curr) {
 
         if (*curr == NULL || (*curr)->type != TOKEN_WORD) {
             printf("Syntax error: file name is missing or consecutive redirection\n");
+            g_exit_code = 2;
             free_ast(node);
             return NULL;
         }
@@ -161,6 +162,7 @@ t_ast_node *parse_pipe(t_token **curr)
     {
         fprintf(stderr,
             "Syntax error: invalid pipe or consecutive pipe sign\n");
+        g_exit_code = 2;
         return (NULL);
     }
 
@@ -177,8 +179,8 @@ t_ast_node *parse_pipe(t_token **curr)
 
         if (!*curr || (*curr)->type == TOKEN_PIPE)
         {
-            fprintf(stderr,
-                "Syntax error: invalid pipe or consecutive pipe sign\n");
+            fprintf(stderr, "Syntax error: invalid pipe or consecutive pipe sign\n");
+            g_exit_code = 2;
             free_ast(node);
             return (NULL);
         }

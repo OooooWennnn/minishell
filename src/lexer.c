@@ -29,6 +29,7 @@ t_token *extract_word (char *input, int *i) {
 
     if (in_quotes != NORMAL) {
         fprintf(stderr, "Syntax error: unclosed quotes\n");
+        g_exit_code = 2;
         return NULL;
     }
 
@@ -126,13 +127,12 @@ void token_add_back (t_token **head, t_token *new_token) {
 t_token *tokenize(char *input) {
     t_token *head = NULL;
     int i = 0;
-    char in_quotes = 0;
 
     while (input[i] != '\0') {
-        in_quotes = update_quote_state(input[i], in_quotes);
-
-        if (in_quotes == 0) {
-            skip_whitespaces (input, &i);
+        skip_whitespaces (input, &i);
+        
+        if (input[i] == '\0') {
+            break;
         }
 
         t_token *new_token = NULL;
@@ -155,7 +155,7 @@ t_token *tokenize(char *input) {
         }
 
         token_add_back(&head, new_token);
-        printf("TYPE: %d | VALUE: \"%s\"\n", new_token->type, new_token->value);
+        // printf("TYPE: %d | VALUE: \"%s\"\n", new_token->type, new_token->value);
     }
     return head;
 } 

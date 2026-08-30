@@ -65,11 +65,8 @@ static char *join_path (const char *dir, const char *cmd) {
 
 char *find_cmd_path (char *cmd, t_env **env_list) {
     // if cmd contains '/'
-    if (strchr(cmd, '/'))
-    {
-        if (access(cmd, X_OK) == 0)
-            return strdup(cmd);
-        return NULL;
+    if (strchr(cmd, '/')){
+        return strdup(cmd);
     }
 
     char *full_path = NULL;
@@ -137,9 +134,19 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
         setup_child_signals();
         path = find_cmd_path(node->args[0], env_list);
         if (path == NULL) {
+            if (errno == EACCES) {
+                fprintf(stderr, "permission denied: %s\n", node->args[0]);
+                g_exit_code = 126;
+                exit(g_exit_code);
+            }
+            if (errno == ENOMEM) {
+                perror("minishell");
+                g_exit_code = 1;
+                exit(g_exit_code);
+            }
             fprintf(stderr, "command not found: %s\n", node->args[0]);
-            g_exit_code = 127;  // command not found code
-            exit(127);
+            g_exit_code = 127; 
+            exit(g_exit_code);
         }
 
         envp = env_list_to_array (*env_list);
@@ -150,10 +157,21 @@ void execute_cmd(t_ast_node *node, t_env **env_list) {
         }
 
         execve(path, node->args, envp);
-        perror("execve");
+        perror("minishell");
         free(path);
         envp_free(envp);
-        exit(126);
+
+        if (errno == ENOENT) {
+            g_exit_code = 127;
+        }
+        else if (errno == EACCES) {
+            g_exit_code = 126;
+        }
+        else {
+            g_exit_code = 1;
+        }
+
+        exit(g_exit_code);
         // printf("child process (pid: %d)\n", getpid());
 
 
@@ -567,6 +585,7 @@ void execute_pipe (t_ast_node *node, t_env **env_list) {
     if (waitpid(right_pid, &right_status, 0) == -1) {
         perror("waitpid");
         g_exit_code = 1;
+        setup_prompt_signals();
         return;
     }
 
@@ -576,6 +595,7 @@ void execute_pipe (t_ast_node *node, t_env **env_list) {
     else if (WIFSIGNALED(right_status)) {
         g_exit_code = 128 + WTERMSIG(right_status);
     }
+    setup_prompt_signals();
 }
 
 void execute_ast (t_ast_node *node, t_env **env_list) {

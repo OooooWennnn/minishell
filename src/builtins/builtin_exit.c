@@ -1,9 +1,16 @@
 #include "../../inc/minishell.h"
 #include <stdio.h>
 
-int builtin_exit(char **args, t_env **env_list) {
-    
+int g_should_exit = 0;
 
-    printf("builtin_exit function called\n");
-    return 1;
+int builtin_exit(char **args, t_env **env_list) {
+
+    if (args[1] != NULL) {
+        fprintf(stderr, "minishell: exit: arguments not supported\n");
+        g_exit_code = 1;
+        return 1;
+    }
+
+    g_should_exit = 1;
+    return g_exit_code;
 }

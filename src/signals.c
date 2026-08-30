@@ -84,7 +84,8 @@ void setup_child_signals(void) {
 void handle_heredoc_sigint(int signal_number) {
     heredoc_interrupted = 1;
 
-    write(STDOUT_FILENO, "\n", 1);
+    // write(STDOUT_FILENO, "\n", 1);
+    rl_done = 1;
 }
 
 void setup_heredoc_signals(void) {

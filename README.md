@@ -11,7 +11,7 @@
 - **External Commands**: 'ls', 'cat', 'grep', 'wc' via '$PATH' variable or absolute/relative path.
 - **Pipelining**: Supports pipes ('|') through asynchronous child process.
 - **Redirection**: Supports input('<'), output('>', '>>'), and Heredoc('<<').
-- **Signal Handling**: Supports 'Ctrl-C', 'Ctrl-D' to handle bash signals.
+- **Signal Handling**: Supports 'Ctrl-C', 'Ctrl-D' to handle signals.
 - **Environment Variables**: Supports '$VAR' and handles the '$?' exit status.
 
 

@@ -2,6 +2,7 @@
 # define MINISHELL_H
 
 extern int g_exit_code;
+extern int g_should_exit;
 extern volatile int heredoc_interrupted;
 
 // string builder
@@ -96,6 +97,7 @@ int update_env_value(t_env *node, char *value);
 void envp_free (char **envp);
 char **env_list_to_array (t_env *env_list);
 int remove_env_node (char *key, t_env **env_list);
+void free_env_list (t_env *node);
 
 // lexer functions
 t_token *tokenize(char *input);

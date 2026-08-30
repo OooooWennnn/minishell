@@ -263,3 +263,17 @@ char **env_list_to_array (t_env *env_list) {
 
     return envp;
 }
+
+void free_env_list (t_env *node) {
+    t_env *next;
+
+    while (node != NULL) {
+        next = node->next;
+
+        free(node->key);
+        free(node->value);
+        free(node);
+        
+        node = next;
+    }
+}
