@@ -5,17 +5,49 @@
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)
 ![Status](https://img.shields.io/badge/status-In%20Progress-orange.svg) -->
 
-### Key Features
+## Key Features
 
-- **Built-in Commands**: 'echo', 'cd', 'pwd', 'export', 'unset', 'env', 'exit'.
-- **External Commands**: 'ls', 'cat', 'grep', 'wc' via '$PATH' variable or absolute/relative path.
-- **Pipelining**: Supports pipes ('|') through asynchronous child process.
-- **Redirection**: Supports input('<'), output('>', '>>'), and Heredoc('<<').
-- **Signal Handling**: Supports 'Ctrl-C', 'Ctrl-D' to handle signals.
-- **Environment Variables**: Supports '$VAR' and handles the '$?' exit status.
+- **Built-in commands:** `echo`, `cd`, `pwd`, `export`, `unset`, `env`, and `exit`
+- **External commands:** Resolves commands using `$PATH` or direct absolute and relative paths
+- **Pipelines:** Connects multiple commands using concurrent child processes and Unix pipes
+- **Redirections:** Supports `<`, `>`, `>>`, and `<<`
+- **Multiple redirections:** Applies chained redirections in left-to-right order
+- **Environment expansion:** Expands `$VAR` and `$?` with quote-aware behavior
+- **Here-documents:** Collects input before execution using temporary files
+- **Signal handling:**
+  - `Ctrl-C` interrupts the current input or foreground command
+  - `Ctrl-\` is ignored at the prompt and handled by foreground commands
+  - `Ctrl-D` exits the shell at the main prompt or ends heredoc input
+- **Exit status handling:** Preserves command, pipeline, syntax, and signal exit codes
+
+## Quick Start
+
+### Docker
+
+Docker provides the required Linux environment and GNU Readline dependency.
+
+Build the image:
+
+```bash
+docker build -t minishell .
+```
+
+Run the shell:
+
+```bash
+docker run --rm -it --init minishell
+```
+
+Exit using:
+
+```bash
+exit
+```
+
+or press `Ctrl-D`.
 
 
-### Pipeline Flowchart
+## Pipeline Flowchart
 
 ```mermaid
 graph TD

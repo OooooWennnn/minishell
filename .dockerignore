@@ -1,10 +1,10 @@
 .git
 .vscode
-.DS_store
+.DS_Store
 
 minishell
 
-*.0
+*.o
 *.d
 
 docker-output
