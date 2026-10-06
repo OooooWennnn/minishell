@@ -1,9 +1,30 @@
 # Minishell
+
 > Minimal UNIX shell built with C
 
 <!-- ![C](https://img.shields.io/badge/language-C-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)
 ![Status](https://img.shields.io/badge/status-In%20Progress-orange.svg) -->
+
+# <<<<<<< HEAD
+
+## Demo
+
+### Built-ins, variable expansion, and pipelines
+
+Running built-in commands, expanding an environment variable,
+and passing output between processes through a pipe.
+
+![Minishell pipeline demo](docs/images/pipeline.png)
+
+### Redirections and heredoc
+
+Writing and appending to a file, reading input from a file,
+and entering multiline input through a heredoc.
+
+![Minishell redirection demo](docs/images/redirection.png)
+
+> > > > > > > 4c6e09d (Update README)
 
 ## Key Features
 
@@ -46,6 +67,11 @@ exit
 
 or press `Ctrl-D`.
 
+<<<<<<< HEAD
+
+=======
+
+> > > > > > > 4c6e09d (Update README)
 
 ## Pipeline Flowchart
 
@@ -80,31 +106,31 @@ graph TD
     ChildProcess --> Exit[Exit]
 ```
 
-### Development Roadmap
+## Development Roadmap
+
 - **Phase 1**: Environment & Input
-    - Parse `envp` and build key-value linked list.
-    - Setup input infinite loop.
+  - Parse `envp` and build key-value linked list.
+  - Setup input infinite loop.
 - **Phase 2**: Lexer & Parser
-    - Tokenize `char*` and generate AST.
+  - Tokenize `char*` and generate AST.
 - **Phase 3**: Expander & Executor
 - **Phase 4**: Pipes & Redirection
 - **Phase 5**: Debugging
 
-
 ## Core Architecture & Troubleshooting
 
-* **Issue 1: Spaces Inside Quoted Strings**
-  * **Cause:** Splitting input only on spaces incorrectly separated words inside single and double quotes.
-  * **Solution:** Added quote-state tracking so that only unquoted spaces divide tokens.
+- **Issue 1: Spaces Inside Quoted Strings**
+  - **Cause:** Splitting input only on spaces incorrectly separated words inside single and double quotes.
+  - **Solution:** Added quote-state tracking so that only unquoted spaces divide tokens.
 
-* **Issue 2: Quote Preservation During Expansion**
-  * **Cause:** Removing quotes too early discarded information needed for variable expansion and word splitting.
-  * **Solution:** Preserved quote information through tokenization and expansion, then removed quotes during the final splitting stage.
+- **Issue 2: Quote Preservation During Expansion**
+  - **Cause:** Removing quotes too early discarded information needed for variable expansion and word splitting.
+  - **Solution:** Preserved quote information through tokenization and expansion, then removed quotes during the final splitting stage.
 
-* **Issue 3: Chained Redirections Applied in the Wrong Order**
-  * **Cause:** Each new redirection wraps the previous AST node. Traversing from the root caused the last redirection to be applied first. For example, `echo hello > a.txt > b.txt` incorrectly wrote the output to `a.txt`.
-  * **Solution:** Extracted the executable node and recursively applied redirections from the innermost node outward. This keeps the original left-to-right order.
+- **Issue 3: Chained Redirections Applied in the Wrong Order**
+  - **Cause:** Each new redirection wraps the previous AST node. Traversing from the root caused the last redirection to be applied first. For example, `echo hello > a.txt > b.txt` incorrectly wrote the output to `a.txt`.
+  - **Solution:** Extracted the executable node and recursively applied redirections from the innermost node outward. This keeps the original left-to-right order.
 
-* **Issue 4: Standard Input and Output Were Not Restored**
-  * **Cause:** `dup2()` replaces the shell's current stdin or stdout, so the next command could still use the previous redirected file.
-  * **Solution:** Saved stdin and stdout with `dup()` before applying redirections, then restored them with `dup2()` after the command finished.
+- **Issue 4: Standard Input and Output Were Not Restored**
+  - **Cause:** `dup2()` replaces the shell's current stdin or stdout, so the next command could still use the previous redirected file.
+  - **Solution:** Saved stdin and stdout with `dup()` before applying redirections, then restored them with `dup2()` after the command finished.
