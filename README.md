@@ -6,8 +6,6 @@
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey.svg)
 ![Status](https://img.shields.io/badge/status-In%20Progress-orange.svg) -->
 
-# <<<<<<< HEAD
-
 ## Demo
 
 ### Built-ins, variable expansion, and pipelines
@@ -23,8 +21,6 @@ Writing and appending to a file, reading input from a file,
 and entering multiline input through a heredoc.
 
 ![Minishell redirection demo](docs/images/redirection.png)
-
-> > > > > > > 4c6e09d (Update README)
 
 ## Key Features
 
