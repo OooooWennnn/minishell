@@ -63,12 +63,6 @@ exit
 
 or press `Ctrl-D`.
 
-<<<<<<< HEAD
-
-=======
-
-> > > > > > > 4c6e09d (Update README)
-
 ## Pipeline Flowchart
 
 ```mermaid
